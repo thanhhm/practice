@@ -68,8 +68,7 @@ loopJ:
     add     $t7, $t1, $t6       # load base address a[j]
     lw      $t8, ($t7)
 
-    slt     $t9, $t4, $t8       # compare
-    beqz    $t9, swap
+    bgt     $t4, $t8, swap       # compare
 
     b       increaseJ
 
