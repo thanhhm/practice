@@ -146,25 +146,45 @@ func main() {
 	})
 
 	printInput(courses, teachers, registration)
-	// Run(courses, teachers, registration)
+	Run(courses, teachers, registration)
 }
 
 func printInput(courses []*Course, teachers map[string]*Teacher, registration map[string][]*TeacherRegistration) {
 	fmt.Println("course: ")
 	for _, v := range courses {
-		fmt.Println("", *v)
+		fmt.Printf("  %v %v %v %v\n", v.ID, v.Name, v.Type, v.NoClasses)
 	}
+
 	fmt.Println("teacher: ")
 	for _, v := range teachers {
-		fmt.Println("", *v)
+		fmt.Printf("  %v %v %v\n", v.ID, v.Name, v.MaxClass)
 	}
+
+	// -----------------
 	fmt.Println("registration: ")
-	for _, v := range registration {
-		tr := ""
+	header := "     "
+	var regisRow []string
+	idx := 0
+	for k, v := range registration {
+		tr := "  " + k
+
 		for _, m := range v {
-			tr += m.CourseID + " " + m.TeacherID + " " + strconv.Itoa(m.Priority) + " "
+			if idx == 0 {
+				header += " " + m.TeacherID
+			}
+
+			tr += " " + fmt.Sprintf("%3v", m.Priority)
 		}
-		fmt.Println(tr)
+		idx++
+		regisRow = append(regisRow, tr)
+	}
+	sort.Slice(regisRow, func(i, j int) bool {
+		return regisRow[i] < regisRow[j]
+	})
+
+	fmt.Println(header)
+	for _, v := range regisRow {
+		fmt.Println(v)
 	}
 }
 
@@ -175,7 +195,10 @@ func Run(courses []*Course, teachers map[string]*Teacher, registration map[strin
 	basicCount := countCourseType(courses, BasicType)
 	for basicCount > 0 {
 		teacherAssignmentResult := courseAssignment(courses, teachers, registration, BasicType)
-		fmt.Println("teacherAssignmentResult: ", teacherAssignmentResult)
+
+		fmt.Println("Basic course result: ")
+		printTeacherAssignmentResult(teacherAssignmentResult)
+
 		result = append(result, teacherAssignmentResult...)
 
 		basicCount = countCourseType(courses, BasicType)
@@ -185,7 +208,10 @@ func Run(courses []*Course, teachers map[string]*Teacher, registration map[strin
 	electiveCount := countCourseType(courses, ElectiveType)
 	for electiveCount > 0 {
 		teacherAssignmentResult := courseAssignment(courses, teachers, registration, ElectiveType)
-		fmt.Println("teacherAssignmentResult: ", teacherAssignmentResult)
+
+		fmt.Println("Elevtive course result: ")
+		printTeacherAssignmentResult(teacherAssignmentResult)
+
 		result = append(result, teacherAssignmentResult...)
 
 		electiveCount = countCourseType(courses, ElectiveType)
@@ -219,7 +245,7 @@ func printResult(result []TeacherAssignmentResult) {
 			priority = strconv.Itoa(row.Priority)
 		}
 
-		fmt.Printf("%v %v %v %v %v\n", i, classID, row.CourseID, row.TeacherID, priority)
+		fmt.Printf("%v %v %v %v %v\n", i+1, classID, row.CourseID, row.TeacherID, priority)
 	}
 }
 
@@ -377,15 +403,17 @@ func hungarianAssignment(
 		registrationMatrix = fillColTemPriority(registrationMatrix, need, size)
 	}
 
-	fmt.Println("registrationMatrix: ", registrationMatrix)
+	fmt.Println("----------------------------")
+	// fmt.Println("registrationMatrix: ", registrationMatrix)
 	matrix := extractPriority(registrationMatrix, size)
-	fmt.Println("matrix: ", matrix)
+	// fmt.Println("Priority matrix:")
+	// printPriorityMatrix(matrix)
 
 	hungarianResult, err := hungarianAlgorithm.Solve(matrix)
 	if err != nil {
 		log.Fatalln("Hungarian assignment error: ", err.Error())
 	}
-	fmt.Println("result: ", hungarianResult)
+	// fmt.Println("result: ", hungarianResult)
 
 	return buildResult(rowCourses, teachers, registrationMatrix, size, hungarianResult)
 }
@@ -468,4 +496,20 @@ func buildResult(
 	}
 
 	return result
+}
+
+func printPriorityMatrix(m [][]int) {
+	for i := 0; i < len(m); i++ {
+		row := "  "
+		for j := 0; j < len(m); j++ {
+			row += " " + strconv.Itoa(m[i][j])
+		}
+		fmt.Println(row)
+	}
+}
+
+func printTeacherAssignmentResult(result []TeacherAssignmentResult) {
+	for _, v := range result {
+		fmt.Printf("   %v %v %v\n", v.CourseID, v.TeacherID, v.Priority)
+	}
 }
