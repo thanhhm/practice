@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -54,7 +55,7 @@ type TeacherAssignmentResult struct {
 
 func main() {
 	// Read excel file
-	excelFileName := "dataSample4BTL.xlsx"
+	excelFileName := os.Args[1]
 	xlFile, err := xlsx.OpenFile(excelFileName)
 	if err != nil {
 		fmt.Println("Read excel file error: ", err.Error())
@@ -135,6 +136,18 @@ func main() {
 						Priority:  priority,
 					})
 				}
+
+				// Fill the right most cell have no value
+				if len(row.Cells)-1 < len(header) {
+					for i := len(row.Cells); i <= len(header); i++ {
+						teacherRegistration = append(teacherRegistration, &TeacherRegistration{
+							CourseID:  courseID,
+							TeacherID: header[i],
+							Priority:  TempPriority,
+						})
+					}
+				}
+
 				registration[courseID] = teacherRegistration
 			}
 		}
@@ -209,7 +222,7 @@ func Run(courses []*Course, teachers map[string]*Teacher, registration map[strin
 	for electiveCount > 0 {
 		teacherAssignmentResult := courseAssignment(courses, teachers, registration, ElectiveType)
 
-		fmt.Println("Elevtive course result: ")
+		fmt.Println("Elective course result: ")
 		printTeacherAssignmentResult(teacherAssignmentResult)
 
 		result = append(result, teacherAssignmentResult...)
@@ -217,7 +230,7 @@ func Run(courses []*Course, teachers map[string]*Teacher, registration map[strin
 		electiveCount = countCourseType(courses, ElectiveType)
 	}
 
-	printResult(result)
+	printResult(result, courses)
 }
 
 func countCourseType(courses []*Course, courseType int) int {
@@ -230,8 +243,18 @@ func countCourseType(courses []*Course, courseType int) int {
 	return count
 }
 
-func printResult(result []TeacherAssignmentResult) {
-	courseMap := make(map[string]int)
+func printResult(result []TeacherAssignmentResult, courses []*Course) {
+	courseInfo := make(map[string]*Course)
+	for _, v := range courses {
+		courseInfo[v.ID] = v
+	}
+
+	var (
+		basicCount, basicPriority       int
+		electiveCount, electivePriority int
+		notApplicableCount              int
+		courseMap                       = make(map[string]int)
+	)
 	for i := 0; i < len(result); i++ {
 		row := result[i]
 
@@ -245,8 +268,28 @@ func printResult(result []TeacherAssignmentResult) {
 			priority = strconv.Itoa(row.Priority)
 		}
 
+		// Print result info
 		fmt.Printf("%v %v %v %v %v\n", i+1, classID, row.CourseID, row.TeacherID, priority)
+
+		// Count by course type
+		if row.Priority == TempPriority {
+			notApplicableCount++
+		} else {
+			if courseInfo[row.CourseID].Type == BasicType {
+				basicCount++
+				basicPriority += row.Priority
+			} else {
+				electiveCount++
+				electivePriority += row.Priority
+			}
+		}
 	}
+
+	fmt.Println("--------------------------------------------")
+	fmt.Printf("Total priority: %v\n", basicPriority+electivePriority)
+	fmt.Printf("Total course assigned: %v; Total course not applicable: %v\n", basicCount+electiveCount, notApplicableCount)
+	fmt.Printf("Basic course assigned: %v; Elective course assigned: %v\n", basicCount, electiveCount)
+	fmt.Printf("Basic priority: %v; Elective priority: %v\n", basicPriority, electivePriority)
 }
 
 func courseAssignment(
@@ -311,7 +354,7 @@ func oneCourseAssignment(
 		}
 
 		teachers[tcr.TeacherID].MaxClass-- // Reduce the teacher max class
-		tcr.Priority = TempPriority        // The teacher have assigned to the course so remove from the registration list
+		// tcr.Priority = TempPriority        // The teacher have assigned to the course so remove from the registration list
 	} else {
 		result = TeacherAssignmentResult{
 			CourseID:  course.ID,
@@ -390,6 +433,10 @@ func hungarianAssignment(
 				}
 			}
 			if tr == nil {
+				for _, v := range tcRegis {
+					fmt.Printf("%v ", v.TeacherID)
+				}
+				fmt.Printf("\n%v\n", teacherID)
 				log.Fatalln("Get teacher from registration list not found: ", tcRegis)
 			}
 
@@ -480,8 +527,8 @@ func buildResult(
 				Priority:  tcr.Priority,
 			}
 
-			teacher.MaxClass--          // Reduce the teacher max class
-			tcr.Priority = TempPriority // The teacher have assigned to the course so remove from the registration list
+			teacher.MaxClass-- // Reduce the teacher max class
+			// tcr.Priority = TempPriority // The teacher have assigned to the course so remove from the registration list
 		} else {
 			teacherAssignmentResult = TeacherAssignmentResult{
 				CourseID:  rowCourses[i].ID,
