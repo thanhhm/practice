@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	// "github.com/arthurkushman/go-hungarian"
 
@@ -158,15 +159,29 @@ func main() {
 		return courses[i].NoClasses < courses[j].NoClasses
 	})
 
+	fmt.Println("Input information: -----------------------")
 	printInput(courses, teachers, registration)
+
+	start := time.Now().UTC().UnixNano()
 	Run(courses, teachers, registration)
+	end := time.Now().UTC().UnixNano()
+	fmt.Println("Execution time ns: ", end-start)
+
 }
 
 func printInput(courses []*Course, teachers map[string]*Teacher, registration map[string][]*TeacherRegistration) {
 	fmt.Println("course: ")
+	var basicSumNoClass, ElectiveSumNoClass int
 	for _, v := range courses {
+		if v.Type == BasicType {
+			basicSumNoClass += v.NoClasses
+		} else {
+			ElectiveSumNoClass += v.NoClasses
+		}
+
 		fmt.Printf("  %v %v %v %v\n", v.ID, v.Name, v.Type, v.NoClasses)
 	}
+	fmt.Printf("Basic: %v; Elective: %v; Total: %v\n", basicSumNoClass, ElectiveSumNoClass, basicSumNoClass+ElectiveSumNoClass)
 
 	fmt.Println("teacher: ")
 	for _, v := range teachers {
@@ -209,8 +224,8 @@ func Run(courses []*Course, teachers map[string]*Teacher, registration map[strin
 	for basicCount > 0 {
 		teacherAssignmentResult := courseAssignment(courses, teachers, registration, BasicType)
 
-		fmt.Println("Basic course result: ")
-		printTeacherAssignmentResult(teacherAssignmentResult)
+		// fmt.Println("Basic course result: ")
+		// printTeacherAssignmentResult(teacherAssignmentResult)
 
 		result = append(result, teacherAssignmentResult...)
 
@@ -222,8 +237,8 @@ func Run(courses []*Course, teachers map[string]*Teacher, registration map[strin
 	for electiveCount > 0 {
 		teacherAssignmentResult := courseAssignment(courses, teachers, registration, ElectiveType)
 
-		fmt.Println("Elective course result: ")
-		printTeacherAssignmentResult(teacherAssignmentResult)
+		// fmt.Println("Elective course result: ")
+		// printTeacherAssignmentResult(teacherAssignmentResult)
 
 		result = append(result, teacherAssignmentResult...)
 
@@ -250,10 +265,10 @@ func printResult(result []TeacherAssignmentResult, courses []*Course) {
 	}
 
 	var (
-		basicCount, basicPriority       int
-		electiveCount, electivePriority int
-		notApplicableCount              int
-		courseMap                       = make(map[string]int)
+		basicAssignedCount, basicPriority                   int
+		electiveAssignedCount, electivePriority             int
+		notApplicableBasicCount, notApplicableElectiveCount int
+		courseMap                                           = make(map[string]int)
 	)
 	for i := 0; i < len(result); i++ {
 		row := result[i]
@@ -273,22 +288,26 @@ func printResult(result []TeacherAssignmentResult, courses []*Course) {
 
 		// Count by course type
 		if row.Priority == TempPriority {
-			notApplicableCount++
+			if courseInfo[row.CourseID].Type == BasicType {
+				notApplicableBasicCount++
+			} else {
+				notApplicableElectiveCount++
+			}
 		} else {
 			if courseInfo[row.CourseID].Type == BasicType {
-				basicCount++
+				basicAssignedCount++
 				basicPriority += row.Priority
 			} else {
-				electiveCount++
+				electiveAssignedCount++
 				electivePriority += row.Priority
 			}
 		}
 	}
 
-	fmt.Println("--------------------------------------------")
+	fmt.Println("Result: --------------------------------------------")
+	fmt.Printf("Total Basic assigned / Total Basic not applicable: %v/%v\n", basicAssignedCount, notApplicableBasicCount)
+	fmt.Printf("Total Elective assigned / Total Elective not applicable: %v/%v\n", electiveAssignedCount, notApplicableElectiveCount)
 	fmt.Printf("Total priority: %v\n", basicPriority+electivePriority)
-	fmt.Printf("Total course assigned: %v; Total course not applicable: %v\n", basicCount+electiveCount, notApplicableCount)
-	fmt.Printf("Basic course assigned: %v; Elective course assigned: %v\n", basicCount, electiveCount)
 	fmt.Printf("Basic priority: %v; Elective priority: %v\n", basicPriority, electivePriority)
 }
 
