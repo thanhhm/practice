@@ -1,0 +1,2 @@
+1. Cài đặt  go 1.17
+2. Chạy chương trình với lệnh: go run main.go file_name.xlsx
