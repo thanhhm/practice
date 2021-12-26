@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -304,11 +305,24 @@ func printResult(result []TeacherAssignmentResult, courses []*Course) {
 		}
 	}
 
+	// Calculate standard dev
+	totalPriority := basicPriority + electivePriority
+	totalAssigned := basicAssignedCount + electiveAssignedCount
+	averagePriority := totalPriority / totalAssigned
+	var std float64
+	for _, v := range result {
+		if v.Priority == TempPriority {
+			continue
+		}
+		std += math.Pow((float64(v.Priority) - float64(averagePriority)), 2)
+	}
+	std = math.Sqrt(std / (float64(totalAssigned) - 1))
+
 	fmt.Println("Result: --------------------------------------------")
 	fmt.Printf("Total Basic assigned / Total Basic not applicable: %v/%v\n", basicAssignedCount, notApplicableBasicCount)
 	fmt.Printf("Total Elective assigned / Total Elective not applicable: %v/%v\n", electiveAssignedCount, notApplicableElectiveCount)
-	fmt.Printf("Total priority: %v\n", basicPriority+electivePriority)
 	fmt.Printf("Basic priority: %v; Elective priority: %v\n", basicPriority, electivePriority)
+	fmt.Printf("Total priority / StdDev: %v/%.5v\n", totalPriority, std)
 }
 
 func courseAssignment(
